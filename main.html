@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microcosm Mock - Advanced Sidebar v2</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body { height: 100vh; overflow: hidden; }
+        .bg-custom-dark { background-color: #212529; }
+        
+        /* サイドバー設定 */
+        .main-sidebar { width: 60px; height: calc(100vh - 56px); display: flex; flex-direction: column; align-items: center; padding-top: 1rem; }
+        .main-sidebar .nav-link { color: #adb5bd; font-size: 1.5rem; margin-bottom: 1.5rem; transition: color 0.3s; padding: 0; }
+        .main-sidebar .nav-link:hover, .main-sidebar .nav-link.active { color: #fff; }
+        .rag-trigger-icon { margin-top: -12px !important; color: #fff !important; }
+
+        /* コンテンツエリア */
+        .content-area { background-color: #f8f9fa; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
+        .logo-container { text-align: center; margin-bottom: 4rem; }
+        .logo-text { font-family: sans-serif; font-weight: bold; color: #4a90e2; font-size: 2.5rem; margin-top: -10px; display: block; }
+        .chat-input-container { width: 80%; max-width: 800px; background: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 1rem; position: absolute; bottom: 2rem; }
+        .chat-textarea { border: none; resize: none; width: 100%; outline: none; color: #6c757d; }
+
+        /* RAGサイドバー(Offcanvas)内のスタイル */
+        .offcanvas-start { width: 350px; top: 56px; height: calc(100vh - 56px); }
+        .file-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid #eee; }
+        .btn-delete-file { color: #dc3545; cursor: pointer; border: none; background: none; padding: 0; }
+        .file-name { flex-grow: 1; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        /* プログレスバーの調整 */
+        #uploadProgressContainer { display: none; }
+
+        /* ヘッダー・コンテンツ・Offcanvasのスタイル（前回と同様） */
+        .navbar-nav .nav-link { display: flex; flex-direction: column; align-items: center; font-size: 0.8rem; padding: 0.5rem 1rem; }
+        .content-area { background-color: #f8f9fa; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
+        .logo-container { text-align: center; margin-bottom: 4rem; }
+        .logo-text { font-family: sans-serif; font-weight: bold; color: #4a90e2; font-size: 2.5rem; margin-top: -10px; display: block; }
+        .chat-input-container { width: 80%; max-width: 800px; background: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 1rem; position: absolute; bottom: 2rem; }
+        .chat-textarea { border: none; resize: none; width: 100%; outline: none; color: #6c757d; }
+        .offcanvas-start { width: 300px; top: 56px; height: calc(100vh - 56px); }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand navbar-dark bg-custom-dark px-3">
+        <div class="navbar-brand d-flex align-items-center"><i class="bi bi-pentagon-fill text-primary me-2"></i> Microcosm</div>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav mx-auto">
+                <li class="nav-item"><a class="nav-link active" href="#"><i class="bi bi-house-door-fill"></i>Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-database"></i>Rag</a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-search"></i>Search</a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-code-slash"></i>API</a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-check-circle"></i>Check</a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-file-earmark-text"></i>Editor</a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-hdd-stack"></i>Batch</a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-gear"></i>Setting</a></li>
+                <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-question-circle"></i>Help</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="d-flex">
+        <div class="main-sidebar bg-custom-dark">
+            <a href="#" class="nav-link"><i class="bi bi-clock-history"></i></a>
+            <a href="#" class="nav-link active"><i class="bi bi-folder2-open"></i></a>
+            <a href="#" class="nav-link rag-trigger-icon" data-bs-toggle="offcanvas" data-bs-target="#ragOffcanvas"><i class="bi bi-layers-half"></i></a>
+        </div>
+
+        <div class="offcanvas offcanvas-start bg-light" data-bs-scroll="true" data-bs-backdrop="false" tabindex="-1" id="ragOffcanvas">
+            <div class="offcanvas-header border-bottom">
+                <h5 class="offcanvas-title">RAG / ファイル管理</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+            </div>
+            <div class="offcanvas-body">
+                <div class="d-grid gap-2 mb-4">
+                    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        <i class="bi bi-plus-lg me-2"></i>ファイルを新規追加
+                    </button>
+                </div>
+
+                <div id="uploadProgressContainer" class="mb-4">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small class="text-primary fw-bold">アップロード中...</small>
+                        <small id="progressPercent" class="text-muted">0%</small>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                    <h6 class="mb-0">アップロード済み一覧</h6>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                        <label class="form-check-label small text-muted" for="selectAllCheckbox">全選択</label>
+                    </div>
+                </div>
+
+                <div id="fileList">
+                    <div class="file-item bg-white rounded mb-2 shadow-sm">
+                        <button class="btn-delete-file" onclick="prepareDelete(this)"><i class="bi bi-x-circle-fill"></i></button>
+                        <span class="file-name">製品マニュアル_v1.md</span>
+                        <input class="form-check-input file-checkbox" type="checkbox">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <main class="content-area">
+            <div class="logo-container">
+                <i class="bi bi-person-circle" style="font-size: 5rem; color: #4a90e2;"></i> 
+                <span class="logo-text">Microcosm</span>
+            </div>
+            <div class="chat-input-container">
+                <textarea class="chat-textarea" rows="3" placeholder="AIと会話を始めましょう"></textarea>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center p-4">
+                    <p class="mb-4">本当にこのファイルを削除しますか？</p>
+                    <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">いいえ</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">はい</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="uploadModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">ファイルをアップロード</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="fileInput" class="form-label fw-bold">ファイルを選択してください</label>
+                        <div class="alert alert-info py-2" style="font-size: 0.85rem;">
+                            <i class="bi bi-info-circle me-2"></i>.txt .md .xlsxのみを選択してください
+                        </div>
+                        <input class="form-control" type="file" id="fileInput" multiple accept=".txt,.md,.xlsx">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-primary" id="startUploadBtn">アップロード</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let elementToDelete = null;
+        const deleteConfirmModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        const uploadModal = new bootstrap.Modal(document.getElementById('uploadModal'));
+
+        // --- 削除機能 ---
+        function prepareDelete(button) {
+            elementToDelete = button.closest('.file-item');
+            deleteConfirmModal.show();
+        }
+
+        document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+            if (elementToDelete) {
+                elementToDelete.remove();
+                elementToDelete = null;
+            }
+            deleteConfirmModal.hide();
+        });
+
+        // --- 要件：全選択機能 ---
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        selectAllCheckbox.addEventListener('change', (e) => {
+            const checkboxes = document.querySelectorAll('.file-checkbox');
+            checkboxes.forEach(cb => cb.checked = e.target.checked);
+        });
+
+        // --- アップロード機能 (要件：プログレスバー追加) ---
+        document.getElementById('startUploadBtn').addEventListener('click', () => {
+            const fileInput = document.getElementById('fileInput');
+            const fileList = document.getElementById('fileList');
+            const progressContainer = document.getElementById('uploadProgressContainer');
+            const progressBar = document.getElementById('uploadProgressBar');
+            const progressPercent = document.getElementById('progressPercent');
+
+            if (fileInput.files.length > 0) {
+                // モーダルを閉じてプログレスバーを表示
+                uploadModal.hide();
+                progressContainer.style.display = 'block';
+                
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.floor(Math.random() * 20) + 5; // 模擬的な進行
+                    if (progress >= 100) {
+                        progress = 100;
+                        clearInterval(interval);
+                        
+                        // アップロード完了後の処理
+                        finishUpload(fileInput, fileList, progressContainer);
+                    }
+                    progressBar.style.width = progress + '%';
+                    progressPercent.innerText = progress + '%';
+                }, 200);
+
+            } else {
+                alert(".txt, .md, .xlsxファイルを選択してください。");
+            }
+        });
+
+        function finishUpload(fileInput, fileList, progressContainer) {
+            setTimeout(() => {
+                Array.from(fileInput.files).forEach(file => {
+                    const newItem = document.createElement('div');
+                    newItem.className = 'file-item bg-white rounded mb-2 shadow-sm';
+                    newItem.innerHTML = `
+                        <button class="btn-delete-file" onclick="prepareDelete(this)"><i class="bi bi-x-circle-fill"></i></button>
+                        <span class="file-name">${file.name}</span>
+                        <input class="form-check-input file-checkbox" type="checkbox" ${selectAllCheckbox.checked ? 'checked' : ''}>
+                    `;
+                    fileList.appendChild(newItem);
+                });
+                
+                // リセット
+                fileInput.value = '';
+                progressContainer.style.display = 'none';
+                document.getElementById('uploadProgressBar').style.width = '0%';
+                document.getElementById('progressPercent').innerText = '0%';
+            }, 500);
+        }
+    </script>
+</body>
+</html>
