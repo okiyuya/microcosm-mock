@@ -1,0 +1,2 @@
+# microcosm-mock
+2026年3月のアイデアソンに向けたmicrocosmのmock案を管理するリポジトリ
